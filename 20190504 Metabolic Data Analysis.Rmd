@@ -1,0 +1,517 @@
+---
+title: "Metabolic Seahorse Analysis and Transcriptional Changes in Idling Population State"
+author: "Bishal Paudel"
+date: "5/4/2019"
+output: 
+  pdf_document: default
+  html_document: default
+---
+
+```{r, echo=TRUE}
+require(knitr)
+opts_knit$set(root.dir = '~/Dropbox/Collab_Jia_Paudel/Data')
+```
+
+## Metabolic Functional Seahorse data:
+We will analyze Seahorse data for SKMEL5 Subclones SC01, SC07, SC10 at Basal, and idling population state. This is an extension of Paudel et al. Biophysical Journal (2018) <https://doi.org/10.1016/j.bpj.2018.01.016>. Single-cell derived subclones exhibit unique responses in PLX4720 and eventually converge to a near-zero proliferation state called idling state under continued drug exposure. This analysis aims to examine transcriptional and biochemical (metabolic) features of idling population state in three subclones considered in Paudel et al. and describe the characteristics of this drug-tolerant state. Idling population is a drug-induced, reversible state which resemble metabolic low-low phenotype as described in Jia et al. PNAS (2019) <https://www.pnas.org/content/116/9/3909.short>. In this and subsequent analysis, we will examine similarities between metabolic low-low phenotype described in Jia et al. and idling population state, using the transcriptional signatures of the idling state. Additionally, we will directly test how the metabolic programs of idling cells change in comparison to their untreated counterparts. 
+
+### Load the required libraries and functions for analysis.
+```{r, echo=TRUE}
+source("~//Dropbox//Collab_Jia_Paudel//Codes//summarySE.R")
+source("~//Dropbox//Collab_Jia_Paudel//Codes//makeMygraph.R")
+source("~//Dropbox//Collab_Jia_Paudel//Codes//addTograph.R")
+output = "~/Dropbox//Collab_Jia_Paudel/Figures"
+
+# Read the Seahorse data
+data = read.csv("Seahorse_Subclones_Baseline_vs_Idling.csv")
+
+# summarize the Oxygen Consumption Rate (OCR) data--which measures 
+#the mitochondrial respiration through a series of biochemical 
+#inhibition of Electron Transport Chain (ETC)
+df_OCR = summarySE(data, measurevar = "OCR", groupvars = c("Time", "Group"))
+df_OCR = df_OCR[(df_OCR$Group %in% c("SC01BasalMito", "SC07BasalMito", "SC10BasalMito", 
+                                     "SC01IdlingMito", "SC07IdlingMito", "SC10IdlingMito")),]
+
+# summarize the Extracellular Acidification Rate (ECAR)--
+#which measures the change in pH of cells, indicative of accumulation 
+#of lactate (proxy for glycolytic activity of cells).
+df_ECAR = summarySE(data, measurevar = "ECAR", groupvars = c("Time", "Group"))
+df_ECAR = df_ECAR[(df_ECAR$Group %in% c("SC01BasalGlyco", "SC07BasalGlyco", "SC10BasalGlyco", 
+                                        "SC01IdlingGlyco", "SC07IdlingGlyco", "SC10IdlingGlyco")),]
+
+# define state and cell for each dataset
+df_OCR$state = substr(df_OCR$Group, 5, (nchar(as.character(df_OCR$Group))-4))
+df_ECAR$state = substr(df_ECAR$Group, 5, (nchar(as.character(df_ECAR$Group))-5))
+df_OCR$cell = substr(df_OCR$Group, 1, 4)
+df_ECAR$cell = substr(df_ECAR$Group, 1, 4)
+
+```
+
+### Load the required libraries.
+
+```{r, echo=FALSE}
+list.of.packages <- c("ggplot2", "Hmisc", "gplots", "gridExtra", "RColorBrewer", "pheatmap", "data.table")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+```
+
+### Initial plotting for the subclones seahorse data ECAR
+```{r, echo=TRUE}
+# we will use these three colors for the purpose of the plotting. 
+#First color for SC01, second color for SC07, and the third for SC10.
+require(Hmisc)
+colors = c("#FF0000FF", "#FF8000FF", "#4C00FFFF")
+State = "Basal"
+df_ECARb = subset(df_ECAR, df_ECAR$state=="Basal")
+d01 = subset(df_ECARb, df_ECARb$cell=='SC01')
+d07 = subset(df_ECARb, df_ECARb$cell=='SC07')
+d10 = subset(df_ECARb, df_ECARb$cell=='SC10')
+
+pdf(paste0(output, "/", "20190503_Baseline_ECAR.pdf"), 
+    height=4, width=4)
+par(ps=12, cex=1., cex.axis=1., mgp=c(2,0.5,0), mar=c(5,4,1,1)+0.1)
+makeMygraph(d01, d01$Time, d01$ECAR, col=colors[1], lwd=2.0, xaxis = "Time (mins)", yaxis = "ECAR (mpH/min)", 
+            xmax = 80, ymax = 150, title = "", sub = "")
+addTograph(d07, d07$Time, d07$ECAR, col=colors[2],lwd=2.0)
+addTograph(d10, d10$Time, d10$ECAR, col=colors[3],lwd=2.0)
+box( , lwd=2)
+axis(side=1, lwd=2)
+axis(side=2, lwd=2)
+dev.off()
+
+State = "Idling"
+df_ECARi = subset(df_ECAR, df_ECAR$state=="Idling")
+d01 = subset(df_ECARi, df_ECARi$cell=='SC01')
+d07 = subset(df_ECARi, df_ECARi$cell=='SC07')
+d10 = subset(df_ECARi, df_ECARi$cell=='SC10')
+
+pdf(paste0(output, "/", "20190503_Idling_ECAR.pdf"), 
+    height=4, width=4)
+par(ps=12, cex=1., cex.axis=1., mgp=c(2,0.5,0), mar=c(5,4,1,1)+0.1)
+makeMygraph(d01, d01$Time, d01$ECAR, col=colors[1], lwd=2.0, xaxis = "Time (mins)", yaxis = "ECAR (mpH/min)", 
+            xmax = 80, ymax = 150, title = "", sub = "")
+addTograph(d07, d07$Time, d07$ECAR, col=colors[2],lwd=2.0)
+addTograph(d10, d10$Time, d10$ECAR, col=colors[3],lwd=2.0)
+box( , lwd=2)
+axis(side=1, lwd=2)
+axis(side=2, lwd=2)
+dev.off()
+
+```
+
+### Initial plotting for the Seahorse data OCR
+```{r, echo=TRUE}
+require(Hmisc)
+State = "Basal"
+df_OCRb = subset(df_OCR, df_OCR$state=="Basal")
+d01 = subset(df_OCRb, df_OCRb$cell=="SC01")
+d07 = subset(df_OCRb, df_OCRb$cell=="SC07")
+d10 = subset(df_OCRb, df_OCRb$cell=="SC10")
+
+pdf(paste0(output, "/", "20190503_Baseline_OCR.pdf"), 
+    height=4, width=4)
+par(ps=12, cex=1., cex.axis=1., mgp=c(2,0.5,0), mar=c(5,4,1,1)+0.1)
+makeMygraph(d01, d01$Time, d01$OCR, col=colors[1],  lwd=2.0, xaxis="Time (mins)", yaxis="OCR (pmol/min)",
+            xmax=80, ymax=400, title="", sub="")
+addTograph(d07, d07$Time, d07$OCR, col=colors[2],lwd=2.0)
+addTograph(d10, d10$Time, d10$OCR, col=colors[3],lwd=2.0)
+box( , lwd=2)
+axis(side=1, lwd=2)
+axis(side=2, lwd=2)
+dev.off()
+
+
+State = "Idling"
+df_OCRi = subset(df_OCR, df_OCR$state=="Idling")
+d01 = subset(df_OCRi, df_OCRi$cell=="SC01")
+d07 = subset(df_OCRi, df_OCRi$cell=="SC07")
+d10 = subset(df_OCRi, df_OCRi$cell=="SC10")
+
+pdf(paste0(output, "/", "20190503_Idling_OCR.pdf"), 
+    height=4, width=4)
+par(ps=12, cex=1., cex.axis=1., mgp=c(2,0.5,0), mar=c(5,4,1,1)+0.1)
+makeMygraph(d01, d01$Time, d01$OCR, col=colors[1],  lwd=2.0, xaxis="Time (mins)", yaxis="OCR (pmol/min)",
+            xmax=80, ymax=400, title="", sub="")
+addTograph(d07, d07$Time, d07$OCR, col=colors[2],lwd=2.0)
+addTograph(d10, d10$Time, d10$OCR, col=colors[3],lwd=2.0)
+box( , lwd=2)
+axis(side=1, lwd=2)
+axis(side=2, lwd=2)
+dev.off()
+
+```
+
+### Working with the calculated metabolic parameters from the Seahorse data
+The calcualted parameters from the typical Seahorse assay are: <https://www.nature.com/articles/srep42604/figures/2>. 
+
+```{r, echo=TRUE}
+require(ggsignif)
+# read the parameters data
+data = read.csv("Subclones_Metabolic_Parameters_calculated.csv")
+head(data)
+unique(data$cell)
+
+dataB <- data[grep("Basal", data$group),]; dataB$state = "Basal"
+dataGB <- dataB[grep("Glyco", dataB$group),]
+dataMB <- dataB[grep("Mito", dataB$group),]
+
+dataI <- data[grep("Idling", data$group),]; dataI$state = "Idling"
+dataGI <- dataI[grep("Glyco", dataI$group),]
+dataMI <- dataI[grep("Mito", dataI$group),]
+
+glyco1 = dataGB[, c("Non.Glyco","Glyco", "glyco.rep", "glyco.reserve", "Date", "cell", "state")]; 
+glyco2 = dataGI[, c("Non.Glyco","Glyco", "glyco.rep", "glyco.reserve", "Date", "cell", "state")]; 
+glyco = rbind(glyco1, glyco2); 
+glyco$group = paste0(glyco$cell, "_", glyco$state)
+
+mito1 = dataMB[,c("basalM", "ATP", "max.rep", "spare.cap", "Date", "cell", "state")]; 
+mito2 = dataMI[,c("basalM", "ATP", "max.rep", "spare.cap", "Date", "cell", "state")]; 
+mito = rbind(mito1, mito2)
+mito$group = paste0(mito$cell, "_", mito$state)
+
+```
+
+
+### Plotting the mitochondrial respiration parameters
+```{r, echo=TRUE}
+# Mito features
+mtp1 = ggplot(mito, aes(x= group, y= basalM, color=cell)) +
+  geom_boxplot(outlier.shape = NA, size = 2) +
+  geom_point(aes(color = cell, shape = state))+
+  scale_color_manual(values=c(colors))+
+  theme_bw()+ labs(y="Basal Mito Respiration", x="") + scale_y_continuous(limits=c(0,300))+
+  theme(panel.border = element_rect(linetype = "solid", size = 2, fill = NA), 
+        axis.ticks = element_line(size=2, color = "black"), 
+        axis.text = element_text(color = "black", size = 12))+
+  geom_signif(comparisons = list(c("SC01_Basal", "SC01_Idling"),
+                                 c("SC07_Basal", "SC07_Idling"),
+                                 c("SC10_Basal", "SC10_Idling")),
+              map_signif_level=TRUE, y_position = c(150, 220, 250), test = "t.test", size = 1)
+
+mtp2 = ggplot(mito, aes(x= group, y= ATP, color=cell)) +
+  geom_boxplot(outlier.shape = NA, size = 2) +
+  geom_point(aes(color = cell, shape = state))+
+  scale_color_manual(values=c(colors))+
+  theme_bw()+ labs(y="ATP Production", x="") + scale_y_continuous(limits=c(0,300))+
+  theme(panel.border = element_rect(linetype = "solid", size = 2, fill = NA), 
+        axis.ticks = element_line(size=2, color = "black"), 
+        axis.text = element_text(color = "black", size = 12))+
+  geom_signif(comparisons = list(c("SC01_Basal", "SC01_Idling"),
+                                 c("SC07_Basal", "SC07_Idling"),
+                                 c("SC10_Basal", "SC10_Idling")),
+              map_signif_level=TRUE, y_position = c(150, 220, 200), test = "t.test", size = 1)
+
+mtp3 = ggplot(mito, aes(x= group, y= max.rep, color=cell)) +
+  geom_boxplot(outlier.shape = NA, size = 2) +
+  geom_point(aes(color = cell, shape = state))+
+  scale_color_manual(values=c(colors))+
+  theme_bw()+ labs(y="Max. Respiration", x="") + scale_y_continuous(limits=c(0,300))+
+  theme(panel.border = element_rect(linetype = "solid", size = 2, fill = NA), 
+        axis.ticks = element_line(size=2, color = "black"), 
+        axis.text = element_text(color = "black", size = 12))+
+  geom_signif(comparisons = list(c("SC01_Basal", "SC01_Idling"),
+                                 c("SC07_Basal", "SC07_Idling"),
+                                 c("SC10_Basal", "SC10_Idling")),
+              map_signif_level=TRUE, y_position = c(290, 299, 300), test = "t.test", size = 1)
+
+
+mtp4 = ggplot(mito, aes(x= group, y= spare.cap, color=cell)) +
+  geom_boxplot(outlier.shape = NA, size = 2) +
+  geom_point(aes(color = cell, shape = state))+
+  scale_color_manual(values=c(colors))+
+  theme_bw()+ labs(y="Spare Capacity", x="") + scale_y_continuous(limits=c(0,300))+
+  theme(panel.border = element_rect(linetype = "solid", size = 2, fill = NA), 
+        axis.ticks = element_line(size=2, color = "black"), 
+        axis.text = element_text(color = "black", size = 12))+
+  geom_signif(comparisons = list(c("SC01_Basal", "SC01_Idling"),
+                                 c("SC07_Basal", "SC07_Idling"),
+                                 c("SC10_Basal", "SC10_Idling")),
+              map_signif_level=TRUE, y_position = c(250, 295, 280), test = "t.test", size = 1)
+
+mtp1; 
+mtp2; 
+mtp3; 
+mtp4
+# Highlighting the two mitochondrial respiration-
+# parameters
+
+pdf(paste0(output, "/Subclones_mitochondrial_param1.pdf"), height = 4.5, width = 6.5)
+par(ps=12, cex=1, cex.axis=1)
+mtp1
+dev.off()
+
+pdf(paste0(output, "/Subclones_mitochondrial_param2.pdf"), height = 4.5, width = 6.5)
+par(ps=12, cex=1, cex.axis=1)
+mtp4
+dev.off()
+
+```
+
+### Plotting the glycolytic respiration parameters
+
+```{r, echo=TRUE}
+# glyco features 
+
+ggplot(glyco, aes(x= group, y= Non.Glyco, color=cell)) +
+  geom_boxplot(outlier.shape = NA, size = 2) +
+  geom_point(aes(color = cell, shape = state))+
+  scale_color_manual(values=c(colors))+
+  theme_bw()+ labs(y="Non-Glycolytic Respiration", x="") + scale_y_continuous(limits=c(0,300))+
+  theme(panel.border = element_rect(linetype = "solid", size = 2, fill = NA), 
+        axis.ticks = element_line(size=2, color = "black"), 
+        axis.text = element_text(color = "black", size = 12))+
+  geom_signif(comparisons = list(c("SC01_Basal", "SC01_Idling"),
+                                 c("SC07_Basal", "SC07_Idling"),
+                                 c("SC10_Basal", "SC10_Idling")),
+              map_signif_level=TRUE, y_position = c(250, 270, 280), test = "t.test", size = 1.0)
+
+
+ggplot(glyco, aes(x= group, y= Glyco, color=cell)) +
+  geom_boxplot(outlier.shape = NA, size = 2) +
+  geom_point(aes(color = cell, shape = state))+
+  scale_color_manual(values=c(colors))+
+  theme_bw()+ labs(y="Glycolysis", x="") + scale_y_continuous(limits=c(0,100))+
+  theme(panel.border = element_rect(linetype = "solid", size = 2, fill = NA), 
+        axis.ticks = element_line(size=2, color = "black"), 
+        axis.text = element_text(color = "black", size = 12))+
+  geom_signif(comparisons = list(c("SC01_Basal", "SC01_Idling"),
+                                 c("SC07_Basal", "SC07_Idling"),
+                                 c("SC10_Basal", "SC10_Idling")),
+              map_signif_level=TRUE, y_position = c(60, 60, 80), test = "t.test", size = 1)
+
+
+ggplot(glyco, aes(x= group, y= glyco.rep, color=cell)) +
+  geom_boxplot(outlier.shape = NA, size = 2) +
+  geom_point(aes(color = cell, shape = state))+
+  scale_color_manual(values=c(colors))+
+  theme_bw()+ labs(y="Glycolytic Respiration", x="") + scale_y_continuous(limits=c(0,300))+
+  theme(panel.border = element_rect(linetype = "solid", size = 2, fill = NA), 
+        axis.ticks = element_line(size=2, color = "black"), 
+        axis.text = element_text(color = "black", size = 12))+
+  geom_signif(comparisons = list(c("SC01_Basal", "SC01_Idling"),
+                                 c("SC07_Basal", "SC07_Idling"),
+                                 c("SC10_Basal", "SC10_Idling")),
+              map_signif_level=TRUE, y_position = c(250, 250, 280), test = "t.test", size = 1)
+
+ggplot(glyco, aes(x= group, y= glyco.reserve, color=cell)) +
+  geom_boxplot(outlier.shape = NA, size = 2) +
+  geom_point(aes(color = cell, shape = state))+
+  scale_color_manual(values=c(colors))+
+  theme_bw()+ labs(y="Glycolytic Reserve", x="") + scale_y_continuous(limits=c(0,300))+
+  theme(panel.border = element_rect(linetype = "solid", size = 2, fill = NA), 
+        axis.ticks = element_line(size=2, color = "black"), 
+        axis.text = element_text(color = "black", size = 12))+
+  geom_signif(comparisons = list(c("SC01_Basal", "SC01_Idling"),
+                                 c("SC07_Basal", "SC07_Idling"),
+                                 c("SC10_Basal", "SC10_Idling")),
+              map_signif_level=TRUE, y_position = c(250, 250, 280), test = "t.test", size = 1)
+
+```
+
+## Plotting the metabolic parameters between baseline and idling cells
+### Summarize the data by the mean values
+```{r, echo=TRUE}
+require(data.table)
+mi = mito[,c(1,2,3, 4,8)]
+mitoSummary = aggregate(.~group, data=mi, FUN=mean)
+gy = glyco[,c(1,2,3,4,8)]
+glycoSummary = aggregate(.~group, data=gy, FUN=mean)
+
+tm = transpose(mitoSummary)
+colnames(tm) = tm[1,]; tm = tm[-1, ]
+rownames(tm) = c("basalM", "ATP", "max.rep", "spare.cap")
+
+tg = transpose(glycoSummary)
+colnames(tg) = tg[1,]; tg = tg[-1, ]
+rownames(tg) = c("Non.Glyco", "Glyco", "glyco.rep", "glyco.reserve")
+
+dmt = rbind(tg, tm)
+
+```
+
+### Plotting as heatmap
+```{r, echo=TRUE}
+require(gplots)
+library(RColorBrewer)
+library(pheatmap)
+
+dataF <- data.frame(dmt)
+mat1 <- dataF
+mat1 <- data.matrix(mat1)
+rownames(mat1) <- rownames(mat1)
+mat1 <- mat1 - rowMeans(mat1)
+#list <- display.brewer.all(10, type = "div", colorblindFriendly = T)
+my_palette <- colorRampPalette(c("blue","red"))(n = 6)
+heat <- pheatmap(mat1[,], 
+                 color = my_palette, 
+                 width = 10,
+                 cellwidth = 30, 
+                 scale = "row", 
+                 cluster_rows = F, 
+                 cluster_cols = T, 
+                 treeheight_row = 0, 
+                 treeheight_col = 50, 
+                 legend = T,
+                 annotation_row = NULL, 
+                 annotation_col = NULL, 
+                 show_rownames = TRUE, 
+                 main = "", 
+                 fontsize = 12, 
+                 fontsize_col = 12, 
+                 fontsize_row = 12, 
+                 angle_col = 45)
+pdf(paste0(output, "/Subclones_heatmap_metabolic_parameters.pdf"), height = 5, width = 5.5)
+par(ps=12, cex=1, cex.axis=1)
+heat
+dev.off()
+```
+
+### Plotting all metabolic parameters together and comparing between groups
+```{r}
+library(ggplot2)
+dmt = data.frame(dmt)
+newdt = stack((dmt[,]))
+newdt$cell = substr(newdt$ind, 1, 4); newdt$state = substr(newdt$ind, 6, nchar(as.character(newdt$ind)))
+
+plot = ggplot(newdt, aes(x = ind, y = as.numeric(values), color = cell)) +
+  geom_boxplot(outlier.shape = NA, size = 1.5)+
+  geom_point(aes(colour = cell))+
+  scale_color_manual(values=c(colors))+
+  theme_bw()+ labs(y="Metabolic parameters", x="") + scale_y_continuous(limits=c(0,300))+
+  theme(panel.border = element_rect(linetype = "solid", size = 2, fill = NA), 
+        axis.ticks = element_line(size=2, color = "black"), 
+        axis.text = element_text(color = "black", size = 12))+
+  geom_signif(comparisons = list(c("SC01_Basal", "SC01_Idling"),
+                                 c("SC07_Basal", "SC07_Idling"),
+                                 c("SC10_Basal", "SC10_Idling")),
+              map_signif_level=TRUE, y_position = c(140, 200, 170), test = "t.test", size = 1.5)
+plot
+pdf(paste0(output, "/Metabolic Parameters_Subclones_Basal_vs_Idling.pdf"), height = 4, width = 6)
+par(ps=12, cex=1, cex.axis=1)
+plot
+dev.off()
+```
+
+### aggregating the metabollic features by their pathways (glycolytic vs mitochondrial)
+
+```{r, echo=TRUE}
+library(ggplot2)
+dmt = data.frame(dmt)
+dg = dmt[1:4, ]; ng = stack(dg); ng$values = as.numeric(ng$values)
+dm = dmt[5:8, ]; nm = stack(dm); nm$values = as.numeric(nm$values)
+ngt = aggregate(values~ind, data=ng, FUN = mean); 
+nmt = aggregate(values~ind, data=nm, FUN = mean); 
+dth = data.frame(glyco = ngt$values, mito = nmt$values, group = ngt$ind)
+dth$cell = substr(dth$group, 1, 4); dth$state = substr(dth$group, 6, nchar(as.character(dth$group)))
+head(dth)
+
+plot = ggplot(dth, aes(x = mito, y = glyco, color = cell, shape=state)) +
+  geom_point(aes(colour = cell, size=3))+
+  scale_color_manual(values=c(colors))+
+  scale_shape_manual(values=c(19,  8))+
+  theme_bw()+ labs(y="Seahorse: Glycolysis Parameters", x="Seahorse: OXPHOS parameters") +
+  theme(panel.border = element_rect(linetype = "solid", size = 2, fill = NA), 
+        axis.ticks = element_line(size=2, color = "black"), 
+        axis.text = element_text(color = "black", size = 12))+
+  scale_y_continuous(limits=c(0,100))
+plot
+pdf(paste0(output, "/Seahorse_Glycosis_vs_OXPHOS.pdf"), height = 4, width = 6)
+par(ps=12, cex=1, cex.axis=1)
+plot
+dev.off()
+
+```
+
+
+
+### Working with time-course RNASeq data
+```{r, echo=TRUE}
+library(varhandle)
+d = read.csv("log-transformed_geneExpression_v1.csv")
+rownames(d) = d$X
+d$X = NULL 
+
+# select the genes involved in glycolysis and oxidative phosphorylation
+glyco  = read.delim2("hallmark_glycolysis.txt"); glyco = glyco[-1,]; glyco = unfactor(glyco)
+oxphos = read.delim2("hallmark_oxphos.txt"); oxphos = oxphos[-1, ]; oxphos = unfactor(oxphos)
+metG = data.frame(genes = c(glyco, oxphos))
+d = d[(d$genes %in% metG$genes),]
+d$genes = NULL 
+
+# Perform PCA on genes involved in metabolic processes--both glycolysis and mitochondrial
+pca_result <- prcomp(t(d), center = T, scale = F)
+percentVar <- round(100*pca_result$sdev^2/sum(pca_result$sdev^2),1)
+
+#print(pca_result)
+pca_result$rotation = -pca_result$rotation
+pca_result$x = -pca_result$x
+pca_result$sdev
+VE = pca_result$sdev^2
+PVE = VE/sum(VE)
+variance = data.frame(PC = colnames(pca_result$rotation), var = round(VE, 4), VE = round(PVE, 4), 
+                      cum = round(cumsum(PVE), 4))
+variance$percent = variance$VE/sum(variance$VE)
+
+require(ggplot2)
+require(gridExtra)
+# PVE plot
+plot1 = qplot(c(1:27), PVE) +
+  geom_line() +
+  xlab("Principal Component") +
+  ylab("PVE") +
+  ggtitle("scree plot") + 
+  ylim(0,1)
+# Cumulative PVE plot
+plot2 = qplot(c(1:27), cumsum(PVE)) +
+  geom_line() +
+  xlab("Principal Component") +
+  ylab("PVE") +
+  ggtitle("cumulative scree plot") + 
+  ylim(0,1)
+#pdf("cumulative scree plot PCA.pdf", width = 6, height = 3)
+grid.arrange(plot1, plot2, ncol = 2)
+
+
+dataPC = data.frame(pc1 = pca_result$x[,1], pc2 = pca_result$x[,2], 
+                    pc3 = pca_result$x[,3], pc4 = pca_result$x[,4], 
+                    pc5 = pca_result$x[,5], pc6 = pca_result$x[,6])
+# plot the pca
+cell = c(rep("SC01", 3), rep("SC07", 3), rep("SC10", 3)); cell = rep(cell, 3)
+state = c("0d", "3d", "8d"); state = rep(state, each=9)
+
+plot = (qplot(pc1, pc2, data = dataPC, color = cell, shape=state,
+       main = "PC1 vs PC2, top variable genes", size = I(6)) 
+  + labs(x = paste0("PC1: ", round(percentVar[1],4), "%"),
+         y = paste0("PC2: ", round(percentVar[2],4), "%"))
+  + scale_color_manual(values=c(colors))
+  + scale_shape_manual(values=c(19, 17, 8))
+  + theme(axis.text = element_text(color = "black", size = 12))
+)
+plot
+pdf(paste0(output, "/Time_course_metabolic_gene_expression_PCA.pdf"), height = 4, width = 6)
+par(ps=12, cex=1, cex.axis=1)
+plot
+dev.off()
+
+```
+
+
+
+
+```{r, echo=TRUE}
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+columns(org.Hs.eg.db)
+pc1 = data.frame(score_pc1 = pca_result$rotation[,1], score_pc2 = pca_result$rotation[,2])
+pc1 = pc1[(order(pc1$score_pc1, decreasing = T)),]
+
+pc1$symbol <- mapIds(org.Hs.eg.db,
+                        keys=row.names(pc1),
+                        column="SYMBOL",
+                        keytype="ENSEMBL",
+                        multiVals="first")
+pc1 = na.omit(pc1)
+head(pc1, 20)
+```
+
